@@ -28,8 +28,13 @@
  * desc
  *
  */
-
+#include <iostream>
+#include <ctime>
+#include <ratio>
 #include <myshmclient.hpp>
+#include <chrono>
+#include <clocale>
+#include <cstdio>
 //#include <trafficlexer.hpp>
 
 char data[524288];
@@ -317,6 +322,7 @@ void justine::sampleclient::MyShmClient::start ( boost::asio::io_service& io_ser
 }
 
 void justine::sampleclient::MyShmClient::start10 ( boost::asio::io_service& io_service, const char * port )
+
 {
 
 #ifdef DEBUG
@@ -337,37 +343,86 @@ void justine::sampleclient::MyShmClient::start10 ( boost::asio::io_service& io_s
   unsigned int t {0u};
   unsigned int s {0u};
 
-  std::vector<Gangster> gngstrs;
+  bool elso = false;
+  bool masodik = false;
 
+  std::fstream fs;
+  fs.open ("check.txt", std::fstream::out);
+  fs << 1 << std::endl;
+  
+  std::vector<Gangster> gngstrs;
+  //nodes nevű vektorban van tárolva a 10 csomópont
+     std::vector<unsigned int> nodes={651615380,651615380,651615380,651615380,651615380,651615380,651615380,651615380,651615380,651615380};
+    std::vector<unsigned int> nodess={651613292,243202123,207427447,207427447,651612875,1348431279,3247363059,2526444608,320766589,651613292};
+  
+  auto a = std::chrono::high_resolution_clock::now();//a változóban letároltam az indításkori aktuális időt, ami auto típusú
   for ( ;; )
     {
       std::this_thread::sleep_for ( std::chrono::milliseconds ( 200 ) );
 
-      for ( auto cop:cops )
+      for ( auto cop:cops )//for-each,aminél valami olyasmi történik a háttérben:for(int i=0;i<cop.size;i++),csak nincs i ciklusváltozó
         {
-          car ( socket, cop, &f, &t, &s );
+          car ( socket, cop, &f, &t, &s ); //mindig a következőre mutat cops...
 
           gngstrs = gangsters ( socket, cop, t );
 
-          if ( gngstrs.size() > 0 )
-            g = gngstrs[0].to;
+          if ( gngstrs.size() > 0 ){
+            g = gngstrs[0].to; //amennyi van
+            fs << 1 <<std::endl;}
           else
-            g = 0;
+            g = 0; //lenullázza
 
-          if ( g > 0 )
+          if ( g == 0 )
             {
+              fs << 0 << std::endl;
+             auto b= std::chrono::high_resolution_clock::now();//itt folyamatosan tárolom az aktuális időt
+        if(std::chrono::duration_cast<std::chrono::milliseconds>(b-a).count()>1000 && std::chrono::duration_cast < std::chrono::milliseconds>(b-a).count() < 60000000)//ha az aktuális idő és az indításkori idő különbsége nagyobb mint 2 perc(120000millisec)
+    {
+     if(masodik == false)
+      {for(std::vector<int>::size_type i = 0; i != cops.size(); i++)//ezt a Bagossy féle 2.meetup egyik programjában találtam
+          {
+          car (socket, cops[i], &f, &t, &s);//átadom a szokásos paramétereket a car-nak,plussz cops[]vektor i-edik  elemét   
+          std::vector<osmium::unsigned_object_id_type> path = hasDijkstraPath ( t, nodess[i] );//útvonalat készít
 
-              std::vector<osmium::unsigned_object_id_type> path = hasDijkstraPath ( t, g );
-
-              if ( path.size() > 1 )
-                {
-
-                  std::copy ( path.begin(), path.end(),
-                              std::ostream_iterator<osmium::unsigned_object_id_type> ( std::cout, " -> " ) );
-
-                  route ( socket, cop, path );
-                }
+          if ( path.size() > 1 )
+            {std::copy ( path.begin(), path.end(),
+            std::ostream_iterator<osmium::unsigned_object_id_type> ( std::cout, " -> " ) );
+            route ( socket, cops[i], path );// felküldjük a szerverre az i-edik coppal
             }
-        }
+          }
+      masodik = true;         
+      }
     }
+       auto c= std::chrono::high_resolution_clock::now();//itt folyamatosan tárolom az aktuális időt      
+        if(std::chrono::duration_cast<std::chrono::milliseconds>(c-a).count()>180000)
+    {if(elso == false)
+       {system("/home/rcvedes/robocar-emulator/rcrc");
+       elso = true;
+       }
+     if (g == 0) 
+      {for(std::vector<int>::size_type i = 0; i != cops.size(); i++)//ezt a Bagossy féle 2.meetup egyik programjában találtam
+          {
+          car (socket, cops[i], &f, &t, &s);//átadom a szokásos paramétereket a car-nak,plussz cops[]vektor i-edik  elemét   
+          std::vector<osmium::unsigned_object_id_type> path = hasDijkstraPath ( t, nodes[i] );//útvonalat készít
+
+          if ( path.size() > 1 )
+      {std::copy ( path.begin(), path.end(),
+                         std::ostream_iterator<osmium::unsigned_object_id_type> ( std::cout, " -> " ) );
+       route ( socket, cops[i], path );// felküldjük a szerverre az i-edik coppal
+      }
+          }
+      }
+    }
+            }
+            else
+        {std::vector<osmium::unsigned_object_id_type> path = hasDijkstraPath ( t, g );
+        if ( path.size() > 1 )
+          { std::copy ( path.begin(), path.end(),
+                  std::ostream_iterator<osmium::unsigned_object_id_type> ( std::cout, " -> " ) );
+                  route ( socket, cop, path ); 
+    }
+        }  
+        }
+    }fs.close();
+
 }

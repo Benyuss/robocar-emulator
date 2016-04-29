@@ -89,7 +89,7 @@ int main ( int argc, char* argv[] )
   else
     port.assign ( "10007" );
 
-  int nrcars {100};
+  int nrcars {10000};
   if ( vm.count ( "nrcars" ) )
     nrcars = vm["nrcars"].as < int > ();
 
@@ -97,7 +97,7 @@ int main ( int argc, char* argv[] )
   if ( vm.count ( "minutes" ) )
     minutes = vm["minutes"].as < int > ();
   
-  int catchdist {15.5};
+  int catchdist (15.5);
   if ( vm.count ( "catchdist" ) )
     catchdist = vm["catchdist"].as < int > ();
 
